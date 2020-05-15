@@ -6,7 +6,7 @@ import java.util.jar.*;
 import org.objectweb.asm.tree.ClassNode;
 
 public class Clazz {
-  public final ClassNode node;
+  public ClassNode node;
   public final JarEntry oldEntry;
   public final Object inputFile;
 

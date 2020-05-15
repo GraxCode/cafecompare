@@ -30,10 +30,7 @@ repositories {
 
 dependencies {
 	compile 'commons-io:commons-io:2.6' 
-	
-	compile 'org.apache.commons:commons-configuration2:2.7' 
-	compile 'commons-beanutils:commons-beanutils:1.9.4' 
-	
+
 	compile "com.github.weisj:darklaf-core:${darklaf_ver}"
 	compile "com.github.weisj:darklaf-theme:${darklaf_ver}"
 	compile "com.github.weisj:darklaf-property-loader:${darklaf_ver}"
@@ -42,6 +39,7 @@ dependencies {
 	compile "org.ow2.asm:asm-tree:${asm_ver}"
 	compile "org.ow2.asm:asm-analysis:${asm_ver}"
 	compile "org.ow2.asm:asm-util:${asm_ver}"
+	compile "org.ow2.asm:asm-commons:${asm_ver}"
 	
 	compile 'org.benf:cfr:0.149'
 	compile name: 'fernflower-15-05-20'

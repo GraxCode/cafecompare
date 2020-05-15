@@ -45,6 +45,11 @@ public class Cafecompare extends JFrame {
     });
     file.add(ws);
     bar.add(file);
+    JMenu tools = new JMenu("Tools");
+    JMenuItem remap = new JMenuItem("Remap class names by similarity");
+    remap.addActionListener(l -> trees.remapByClassNames());
+    tools.add(remap);
+    bar.add(tools);
     JMenu options = new JMenu("Options");
     JMenu decompiler = new JMenu("Decompiler");
     ButtonGroup group = new ButtonGroup();
