@@ -32,7 +32,7 @@ public class CodeView extends JPanel implements ActionListener {
 
   private JCheckBox aggress;
 
-  public static IDecompilerBridge decompilerBridge = new CFRBridge();
+  public static IDecompilerBridge decompilerBridge = new FernflowerBridge();
   public static int editCost = 4;
 
   public CodeView(Cafecompare cafecompare) {
@@ -127,11 +127,11 @@ public class CodeView extends JPanel implements ActionListener {
 
   @Override
   public void actionPerformed(ActionEvent e) {
-    if(left.last != null)
+    if (left.last != null)
       load(true, left.last);
-    if(right.last != null)
+    if (right.last != null)
       load(false, right.last);
-    
+
   }
 
   public void load(boolean leftPanel, Clazz member) {

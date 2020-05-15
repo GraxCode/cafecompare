@@ -56,10 +56,10 @@ public class Cafecompare extends JFrame {
     JRadioButtonMenuItem cfr = new JEventRBMItem("CFR 0.149", group, () -> {
       CodeView.decompilerBridge = new CFRBridge();
     });
-    cfr.setSelected(true);
     JRadioButtonMenuItem fernflower = new JEventRBMItem("Fernflower 15-05-20", group, () -> {
       CodeView.decompilerBridge = new FernflowerBridge();
     });
+    fernflower.setSelected(true);
     JRadioButtonMenuItem asmifier = new JEventRBMItem("Bytecode", group, () -> {
       CodeView.decompilerBridge = new ASMifierBridge();
     });
