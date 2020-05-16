@@ -28,7 +28,6 @@ import me.nov.cafecompare.swing.drop.*;
 import me.nov.cafecompare.swing.panel.tree.ClassTreeNode;
 import me.nov.cafecompare.swing.panel.tree.renderer.ClassTreeCellRenderer;
 import name.fraser.neil.plaintext.DiffMatchPatch;
-import name.fraser.neil.plaintext.DiffMatchPatch.Operation;
 
 public class TreeView extends JPanel {
   private static final long serialVersionUID = 1L;
@@ -138,7 +137,7 @@ public class TreeView extends JPanel {
           DiffMatchPatch dmp = new DiffMatchPatch();
           dmp.Diff_Timeout = 0.05f;
           LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode);
-          int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+          int edits = dmp.diff_levenshtein(diff);
           if (edits < bestEditCount) {
             bestEditCount = edits;
             bestMatch = cz;
@@ -149,9 +148,6 @@ public class TreeView extends JPanel {
         }
         if (bestMatch != null) {
           cafecompare.code.load(left, bestMatch);
-          JOptionPane.showMessageDialog(TreeView.this.getParent(), "Class found with " + Math.round((1.0f - (bestEditCount / (float) targetCode.length())) * 100f) + "% match!");
-        } else {
-          JOptionPane.showMessageDialog(TreeView.this.getParent(), "No class matching more than 1% found.");
         }
       }).go();
     }
@@ -287,7 +283,7 @@ public class TreeView extends JPanel {
           Clazz original = bottom.classes.get(i);
           String targetCode = bytecode.get(original);
           Clazz bestMatch = null;
-          int bestEditCount = (int) (targetCode.length() * 0.99);
+          int bestEditCount = (int) (targetCode.length() * 0.95);
           boolean abstr = Access.isAbstract(original.node.access);
           boolean itf = Access.isInterface(original.node.access);
           for (Clazz cz : top.classes) {
@@ -298,7 +294,7 @@ public class TreeView extends JPanel {
             DiffMatchPatch dmp = new DiffMatchPatch();
             dmp.Diff_Timeout = 0.05f;
             LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode.get(cz));
-            int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+            int edits = dmp.diff_levenshtein(diff);
             if (edits < bestEditCount) {
               bestEditCount = edits;
               bestMatch = cz;

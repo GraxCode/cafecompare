@@ -10,7 +10,6 @@ import org.jetbrains.java.decompiler.main.extern.*;
 
 import me.nov.cafecompare.io.JarIO;
 
-
 public class FernflowerBridge implements IDecompilerBridge, IBytecodeProvider, IResultSaver {
 
   public static final HashMap<String, Object> options = new HashMap<>();

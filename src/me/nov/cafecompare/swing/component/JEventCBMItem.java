@@ -13,7 +13,7 @@ public class JEventCBMItem extends JCheckBoxMenuItem implements ActionListener {
     super(option);
     this.event = event;
     this.addActionListener(this);
-    
+
     // to make sure gui settings equal to program settings
     this.setSelected(false);
     this.actionPerformed(null);

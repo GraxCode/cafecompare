@@ -26,7 +26,6 @@ import me.nov.cafecompare.swing.textarea.*;
 import me.nov.cafecompare.thread.ThreadKiller;
 import me.nov.cafecompare.utils.Strings;
 import name.fraser.neil.plaintext.DiffMatchPatch;
-import name.fraser.neil.plaintext.DiffMatchPatch.Operation;
 
 public class CodeView extends JPanel implements ActionListener {
   private static final long serialVersionUID = 1L;
@@ -61,7 +60,9 @@ public class CodeView extends JPanel implements ActionListener {
     leftActionPanel.add(accuracy = new JComboBox<String>(new String[] { "Fast", "Accurate", "Very accurate", "High precision" }));
     accuracy.setSelectedIndex(1);
     accuracy.addActionListener(this);
-    leftActionPanel.add(similarity = new JLabel(""));
+    GridBagConstraints c = new GridBagConstraints();
+    c.insets = new Insets(0, 8, 0, 0);
+    leftActionPanel.add(similarity = new JLabel(""), c);
     JPanel rightActionPanel = new JPanel();
     rightActionPanel.setLayout(new GridBagLayout());
     JButton reload = new JButton(IconLoader.get().loadSVGIcon("res/refresh.svg", false));
@@ -283,7 +284,7 @@ public class CodeView extends JPanel implements ActionListener {
         break;
       }
     }
-    int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+    int edits = dmp.diff_levenshtein(diff);
     int size = diff.stream().mapToInt(d -> d.text.length()).sum();
     float sim = 100 - (100 * (edits / (float) size));
     setSimilarityText(sim);

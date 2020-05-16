@@ -13,7 +13,7 @@ public class JEventRBMItem extends JRadioButtonMenuItem implements ActionListene
     this.event = event;
     this.addActionListener(this);
     bg.add(this);
-    
+
     // to make sure gui settings equal to program settings
     this.setSelected(false);
     this.actionPerformed(null);
