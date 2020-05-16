@@ -129,19 +129,20 @@ public class TreeView extends JPanel {
       new ProcessingDialog(getParent(), true, (p) -> {
         String targetCode = Conversion.textify(member.node);
         Clazz bestMatch = null;
-        int bestEditCount = (int) (targetCode.length() * 0.99);
+        float bestConfidence = 0;
         float size = ct.classes.size();
         for (int i = 0; i < size; i++) {
           Clazz cz = ct.classes.get(i);
           String bytecode = Conversion.textify(cz.node);
-          int edits =  ClassCodeDiff.codeDiff(targetCode, bytecode);
-          if (edits < bestEditCount) {
-            bestEditCount = edits;
+          float confidence = ClassCodeDiff.confidencePercent(targetCode, bytecode);
+          if (confidence > bestConfidence) {
+            bestConfidence = confidence;
             bestMatch = cz;
+            p.setText("Best confidence " + Math.round(bestConfidence) + "% for " + cz.node.name);
           }
-          p.publish(i / size * 100);
-          if (edits == 0)
+          if (confidence > 95)
             break;
+          p.publish(i / size * 100);
         }
         if (bestMatch != null) {
           cafecompare.code.load(left, bestMatch);
@@ -263,11 +264,15 @@ public class TreeView extends JPanel {
 
   }
 
+  private float sum;
+
   public void remapByClassNames() {
     long millis = bottom.classes.size() * top.classes.size() * (50L);
     String warning = String.format("<html>Are you sure you want to guess the class names of the bottom file by the similarity to the top file?<br>This will take about %d minutes and %d seconds.",
         TimeUnit.MILLISECONDS.toMinutes(millis), TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+      HashMap<String, String> equals = new HashMap<>();
+      sum = 0;
       new ProcessingDialog(getParent(), true, (p) -> {
         p.setText("Calculating code...");
         HashMap<Clazz, String> bytecode = new HashMap<>();
@@ -277,15 +282,13 @@ public class TreeView extends JPanel {
         for (Clazz cz : top.classes) {
           bytecode.put(cz, Conversion.textify(cz.node));
         }
-        HashMap<String, String> equals = new HashMap<>();
-        float avg = 0;
         p.setText("Comparing classes...");
         float size = bottom.classes.size();
         for (int i = 0; i < size; i++) {
           Clazz original = bottom.classes.get(i);
           String targetCode = bytecode.get(original);
           Clazz bestMatch = null;
-          int bestEditCount = (int) (targetCode.length() * 0.95);
+          float bestConfidence = 25;
           boolean abstr = Access.isAbstract(original.node.access);
           boolean itf = Access.isInterface(original.node.access);
           for (Clazz cz : top.classes) {
@@ -293,17 +296,18 @@ public class TreeView extends JPanel {
               continue;
             if (itf != Access.isInterface(cz.node.access))
               continue;
-            int edits = ClassCodeDiff.codeDiff(targetCode, bytecode.get(cz));
-            if (edits < bestEditCount) {
-              bestEditCount = edits;
+
+            float confidence = ClassCodeDiff.confidencePercent(targetCode, bytecode.get(cz));
+            if (confidence > bestConfidence) {
+              bestConfidence = confidence;
               bestMatch = cz;
             }
-            if (edits == 0)
+            if (confidence > 95)
               break;
           }
           p.publish(i / size * 100);
           if (bestMatch != null) {
-            avg += (bestEditCount / (float) targetCode.length());
+            sum += bestConfidence;
             equals.put(original.node.name, bestMatch.node.name);
           }
         }
@@ -312,9 +316,10 @@ public class TreeView extends JPanel {
         this.invalidate();
         this.validate();
         this.repaint();
+      }).go().then(() -> {
         JOptionPane.showMessageDialog(TreeView.this.getParent(),
-            equals.size() + " of " + bottom.classes.size() + " class names were remapped successfully, with an average divergence of " + Math.round(100f * (avg / (float) equals.size())) + "%.");
-      }).go();
+            equals.size() + " of " + bottom.classes.size() + " class names were remapped successfully, with an average confidence of " + Math.round((sum / (float) equals.size())) + "%.");
+      });
     }
   }
 

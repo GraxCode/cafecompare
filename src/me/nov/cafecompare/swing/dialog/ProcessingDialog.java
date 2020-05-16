@@ -12,6 +12,7 @@ public class ProcessingDialog extends JDialog {
   private LoadingIndicator li;
   private JProgressBar pb;
   private Consumer<ProcessingDialog> consumer;
+  private Runnable then;
 
   public ProcessingDialog(Component parent, boolean progressBar, Consumer<ProcessingDialog> consumer) {
     this.consumer = consumer;
@@ -32,7 +33,7 @@ public class ProcessingDialog extends JDialog {
     this.add(cp, BorderLayout.CENTER);
     this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
     this.setAlwaysOnTop(true);
-    this.setMinimumSize(new Dimension(300, 100));
+    this.setMinimumSize(new Dimension(600, 100));
     this.pack();
   }
 
@@ -44,7 +45,7 @@ public class ProcessingDialog extends JDialog {
     li.setText(text);
   }
 
-  public void go() {
+  public ProcessingDialog go() {
     SwingUtilities.invokeLater(() -> {
       new Thread(() -> {
         this.setVisible(true);
@@ -52,7 +53,14 @@ public class ProcessingDialog extends JDialog {
         this.dispose();
         this.setVisible(false);
         Toolkit.getDefaultToolkit().beep();
+        if (then != null)
+          then.run();
       }).start();
     });
+    return this;
+  }
+
+  public void then(Runnable then) {
+    this.then = then;
   }
 }
