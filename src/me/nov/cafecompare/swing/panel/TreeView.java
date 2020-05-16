@@ -19,10 +19,9 @@ import com.github.weisj.darklaf.components.loading.LoadingIndicator;
 import com.github.weisj.darklaf.icons.IconLoader;
 
 import me.nov.cafecompare.Cafecompare;
-import me.nov.cafecompare.asm.Access;
 import me.nov.cafecompare.diff.DiffMath;
 import me.nov.cafecompare.io.*;
-import me.nov.cafecompare.remapping.FullRemapper;
+import me.nov.cafecompare.remapping.*;
 import me.nov.cafecompare.swing.component.JTreeWithHint;
 import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.drop.*;
@@ -264,62 +263,19 @@ public class TreeView extends JPanel {
 
   }
 
-  private float sum;
-
   public void remapByClassNames() {
     long millis = bottom.classes.size() * top.classes.size() * (50L);
     String warning = String.format("<html>Are you sure you want to guess the class names of the bottom file by the similarity to the top file?<br>This will take about %d minutes and %d seconds.",
         TimeUnit.MILLISECONDS.toMinutes(millis), TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-      HashMap<String, String> equals = new HashMap<>();
-      sum = 0;
       new ProcessingDialog(getParent(), true, (p) -> {
-        p.setText("Calculating code...");
-        HashMap<Clazz, String> bytecode = new HashMap<>();
-        for (Clazz cz : bottom.classes) {
-          bytecode.put(cz, Conversion.textify(cz.node));
-        }
-        for (Clazz cz : top.classes) {
-          bytecode.put(cz, Conversion.textify(cz.node));
-        }
-        p.setText("Comparing classes...");
-        float size = bottom.classes.size();
-        for (int i = 0; i < size; i++) {
-          Clazz original = bottom.classes.get(i);
-          String targetCode = bytecode.get(original);
-          Clazz bestMatch = null;
-          float bestConfidence = 25;
-          boolean abstr = Access.isAbstract(original.node.access);
-          boolean itf = Access.isInterface(original.node.access);
-          for (Clazz cz : top.classes) {
-            if (abstr != Access.isAbstract(cz.node.access))
-              continue;
-            if (itf != Access.isInterface(cz.node.access))
-              continue;
-
-            float confidence = DiffMath.confidencePercent(targetCode, bytecode.get(cz));
-            if (confidence > bestConfidence) {
-              bestConfidence = confidence;
-              bestMatch = cz;
-            }
-            if (confidence > 95)
-              break;
-          }
-          p.publish(i / size * 100);
-          if (bestMatch != null) {
-            sum += bestConfidence;
-            equals.put(original.node.name, bestMatch.node.name);
-          }
-        }
-        new FullRemapper(bottom.classes).remap(equals);
+        HashMap<String, String> mappings = new MappingFactory().remap(bottom.classes, top.classes, p).get();
+        new FullRemapper(bottom.classes).remap(mappings);
         bottom.loadTree(bottom.classes); // reload
         this.invalidate();
         this.validate();
         this.repaint();
-      }).go().then(() -> {
-        JOptionPane.showMessageDialog(TreeView.this.getParent(),
-            equals.size() + " of " + bottom.classes.size() + " class names were remapped successfully, with an average confidence of " + Math.round((sum / (float) equals.size())) + "%.");
-      });
+      }).go();
     }
   }
 

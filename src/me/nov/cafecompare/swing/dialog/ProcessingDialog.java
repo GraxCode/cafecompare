@@ -1,6 +1,7 @@
 package me.nov.cafecompare.swing.dialog;
 
 import java.awt.*;
+import java.awt.event.*;
 import java.util.function.Consumer;
 
 import javax.swing.*;
@@ -13,6 +14,7 @@ public class ProcessingDialog extends JDialog {
   private JProgressBar pb;
   private Consumer<ProcessingDialog> consumer;
   private Runnable then;
+  private Thread action;
 
   public ProcessingDialog(Component parent, boolean progressBar, Consumer<ProcessingDialog> consumer) {
     this.consumer = consumer;
@@ -35,6 +37,15 @@ public class ProcessingDialog extends JDialog {
     this.setAlwaysOnTop(true);
     this.setMinimumSize(new Dimension(600, 100));
     this.pack();
+    this.addWindowListener(new WindowAdapter() {
+      @SuppressWarnings("deprecation")
+      @Override
+      public void windowClosing(WindowEvent e) {
+        if (action.isAlive())
+          action.stop();
+        dispose();
+      }
+    });
   }
 
   public void publish(float pc) {
@@ -47,7 +58,7 @@ public class ProcessingDialog extends JDialog {
 
   public ProcessingDialog go() {
     SwingUtilities.invokeLater(() -> {
-      new Thread(() -> {
+      action = new Thread(() -> {
         this.setVisible(true);
         consumer.accept(ProcessingDialog.this);
         this.dispose();
@@ -55,7 +66,8 @@ public class ProcessingDialog extends JDialog {
         Toolkit.getDefaultToolkit().beep();
         if (then != null)
           then.run();
-      }).start();
+      });
+      action.start();
     });
     return this;
   }
