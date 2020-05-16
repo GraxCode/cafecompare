@@ -7,6 +7,8 @@ import org.objectweb.asm.*;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.util.TraceClassVisitor;
 
+import me.nov.cafecompare.asm.EasyTextifer;
+
 public class Conversion {
   public static byte[] toBytecode(ClassNode cn, boolean useMaxs) {
     try {
@@ -44,7 +46,7 @@ public class Conversion {
 
   public static String textify(ClassNode cn) {
     StringWriter out = new StringWriter();
-    new ClassReader(toBytecode0(cn)).accept(new TraceClassVisitor(new PrintWriter(out)), ClassReader.SKIP_DEBUG);
+    new ClassReader(toBytecode0(cn)).accept(new TraceClassVisitor(null, new EasyTextifer(), new PrintWriter(out)), ClassReader.SKIP_DEBUG);
     return out.toString();
   }
 

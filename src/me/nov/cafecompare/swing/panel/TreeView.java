@@ -20,6 +20,7 @@ import com.github.weisj.darklaf.icons.IconLoader;
 
 import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.asm.Access;
+import me.nov.cafecompare.diff.ClassCodeDiff;
 import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.remapping.FullRemapper;
 import me.nov.cafecompare.swing.component.JTreeWithHint;
@@ -27,7 +28,6 @@ import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.drop.*;
 import me.nov.cafecompare.swing.panel.tree.ClassTreeNode;
 import me.nov.cafecompare.swing.panel.tree.renderer.ClassTreeCellRenderer;
-import name.fraser.neil.plaintext.DiffMatchPatch;
 
 public class TreeView extends JPanel {
   private static final long serialVersionUID = 1L;
@@ -134,10 +134,7 @@ public class TreeView extends JPanel {
         for (int i = 0; i < size; i++) {
           Clazz cz = ct.classes.get(i);
           String bytecode = Conversion.textify(cz.node);
-          DiffMatchPatch dmp = new DiffMatchPatch();
-          dmp.Diff_Timeout = 0.05f;
-          LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode);
-          int edits = dmp.diff_levenshtein(diff);
+          int edits =  ClassCodeDiff.codeDiff(targetCode, bytecode);
           if (edits < bestEditCount) {
             bestEditCount = edits;
             bestMatch = cz;
@@ -296,10 +293,7 @@ public class TreeView extends JPanel {
               continue;
             if (itf != Access.isInterface(cz.node.access))
               continue;
-            DiffMatchPatch dmp = new DiffMatchPatch();
-            dmp.Diff_Timeout = 0.05f;
-            LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode.get(cz));
-            int edits = dmp.diff_levenshtein(diff);
+            int edits = ClassCodeDiff.codeDiff(targetCode, bytecode.get(cz));
             if (edits < bestEditCount) {
               bestEditCount = edits;
               bestMatch = cz;

@@ -88,7 +88,6 @@ public class Cafecompare extends JFrame {
     JRadioButtonMenuItem asmifier = new JEventRBMItem("Bytecode", group, () -> {
       CodeView.decompilerBridge = new ASMifierBridge();
     });
-
     decompiler.add(cfr);
     decompiler.add(fernflower);
     decompiler.add(asmifier);

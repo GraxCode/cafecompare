@@ -71,7 +71,6 @@ public class CFRBridge implements IDecompilerBridge {
             return Pair.make(bytes, name);
           }
           // cfr loads unnecessary classes. normally you should throw a FNF exception here, but this way, no long comment at the top of the code is created
-          System.out.println(path);
           ClassNode dummy = new ClassNode();
           dummy.name = name;
           dummy.version = 52;
