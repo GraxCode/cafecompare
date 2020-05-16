@@ -1,15 +1,20 @@
 package me.nov.cafecompare;
 
 import java.awt.*;
+import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import org.apache.commons.io.FilenameUtils;
 
 import com.github.weisj.darklaf.icons.IconLoader;
 import com.github.weisj.darklaf.settings.ThemeSettings;
 
 import me.nov.cafecompare.decompiler.*;
+import me.nov.cafecompare.io.JarIO;
 import me.nov.cafecompare.swing.Utils;
 import me.nov.cafecompare.swing.component.*;
 import me.nov.cafecompare.swing.laf.LookAndFeel;
@@ -44,6 +49,26 @@ public class Cafecompare extends JFrame {
       }
     });
     file.add(ws);
+    JMenuItem save = new JMenuItem("Save bottom file");
+    save.addActionListener(l -> {
+      File inputFile = trees.bottom.inputFile;
+      if (inputFile == null) {
+        JOptionPane.showMessageDialog(this, "You have to load a jar file first.");
+        return;
+      }
+      JFileChooser jfc = new JFileChooser(inputFile.getParentFile());
+      jfc.setAcceptAllFileFilterUsed(false);
+      jfc.setSelectedFile(new File(FilenameUtils.removeExtension(inputFile.getAbsolutePath()) + ".jar"));
+      jfc.setDialogTitle("Save transformed jar archive");
+      jfc.setFileFilter(new FileNameExtensionFilter("Java Package (*.jar)", "jar"));
+      int result = jfc.showSaveDialog(this);
+      if (result == JFileChooser.APPROVE_OPTION) {
+        File output = jfc.getSelectedFile();
+        JarIO.saveAsJar(inputFile, output, trees.bottom.classes);
+      }
+      save.setEnabled(true);
+    });
+    file.add(save);
     bar.add(file);
     JMenu tools = new JMenu("Tools");
     JMenuItem remap = new JMenuItem("Remap class names by similarity");
@@ -96,7 +121,7 @@ public class Cafecompare extends JFrame {
     trees = new TreeView(this);
     code = new CodeView(this);
     JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, Utils.addTitleAndBorder("Files to compare", trees), code);
-    split.setResizeWeight(0.35);
+    Utils.setDividerLocation(split, 0.3);
     split.putClientProperty("JSplitPane.style", "invisible");
     JPanel content = new JPanel(new BorderLayout());
     content.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));

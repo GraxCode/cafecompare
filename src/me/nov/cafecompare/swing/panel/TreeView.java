@@ -20,8 +20,10 @@ import com.github.weisj.darklaf.components.loading.LoadingIndicator;
 import com.github.weisj.darklaf.icons.IconLoader;
 
 import me.nov.cafecompare.Cafecompare;
+import me.nov.cafecompare.asm.Access;
 import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.swing.component.JTreeWithHint;
+import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.drop.*;
 import me.nov.cafecompare.swing.panel.tree.ClassTreeNode;
 import me.nov.cafecompare.swing.panel.tree.renderer.ClassTreeCellRenderer;
@@ -35,8 +37,8 @@ public class TreeView extends JPanel {
 
   private Cafecompare cafecompare;
 
-  private ClassTree top;
-  private ClassTree bottom;
+  public ClassTree top;
+  public ClassTree bottom;
 
   private JSplitPane split;
 
@@ -68,7 +70,7 @@ public class TreeView extends JPanel {
     private boolean topPos;
 
     public ClassTree(boolean topPosition) {
-      super(topPosition ? "Drag the old version of the jar or class file here" : "Drag the new version of the jar or class file here");
+      super(topPosition ? "Drag the old version of the jar or class file here" : "Drag the new or obfuscated version of the jar or class file here");
       this.topPos = topPosition;
       this.setRootVisible(false);
       this.setShowsRootHandles(true);
@@ -125,29 +127,33 @@ public class TreeView extends JPanel {
     protected void selectMostMatching(Clazz member, ClassTree ct, boolean left) {
       if (ct.classes.contains(member))
         throw new IllegalArgumentException();
-      String targetCode = Conversion.textify(member.node);
-      Clazz bestMatch = null;
-      int bestEditCount = (int) (targetCode.length() * 0.99);
-      for (Clazz cz : ct.classes) {
-        String bytecode = Conversion.textify(cz.node);
-        DiffMatchPatch dmp = new DiffMatchPatch();
-        dmp.Diff_Timeout = 0.05f;
-        LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode);
-        int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
-        if (edits < bestEditCount) {
-          bestEditCount = edits;
-          bestMatch = cz;
+      new ProcessingDialog(getParent(), true, (p) -> {
+        String targetCode = Conversion.textify(member.node);
+        Clazz bestMatch = null;
+        int bestEditCount = (int) (targetCode.length() * 0.99);
+        float size = ct.classes.size();
+        for (int i = 0; i < size; i++) {
+          Clazz cz = ct.classes.get(i);
+          String bytecode = Conversion.textify(cz.node);
+          DiffMatchPatch dmp = new DiffMatchPatch();
+          dmp.Diff_Timeout = 0.05f;
+          LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode);
+          int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+          if (edits < bestEditCount) {
+            bestEditCount = edits;
+            bestMatch = cz;
+          }
+          p.publish(i / size * 100);
+          if (edits == 0)
+            break;
         }
-        if (edits == 0)
-          break;
-      }
-      if (bestMatch != null) {
-        Toolkit.getDefaultToolkit().beep();
-        cafecompare.code.load(left, bestMatch);
-        JOptionPane.showMessageDialog(TreeView.this.getParent(), "Class found with " + Math.round((1.0f - (bestEditCount / (float) targetCode.length())) * 100f) + "% match!");
-      } else {
-        JOptionPane.showMessageDialog(TreeView.this.getParent(), "No class matching more than 1% found.");
-      }
+        if (bestMatch != null) {
+          cafecompare.code.load(left, bestMatch);
+          JOptionPane.showMessageDialog(TreeView.this.getParent(), "Class found with " + Math.round((1.0f - (bestEditCount / (float) targetCode.length())) * 100f) + "% match!");
+        } else {
+          JOptionPane.showMessageDialog(TreeView.this.getParent(), "No class matching more than 1% found.");
+        }
+      }).go();
     }
 
     @Override
@@ -264,54 +270,65 @@ public class TreeView extends JPanel {
     String warning = String.format("<html>Are you sure you want to guess the class names of the bottom file by the similarity to the top file?<br>This will take about %d minutes and %d seconds.",
         TimeUnit.MILLISECONDS.toMinutes(millis), TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-      HashMap<Clazz, String> bytecode = new HashMap<>();
-      for (Clazz cz : bottom.classes) {
-        bytecode.put(cz, Conversion.textify(cz.node));
-      }
-      for (Clazz cz : top.classes) {
-        bytecode.put(cz, Conversion.textify(cz.node));
-      }
-      HashMap<String, String> equals = new HashMap<>();
-      float avg = 0;
-      for (Clazz original : bottom.classes) {
-        String targetCode = bytecode.get(original);
-        Clazz bestMatch = null;
-        int bestEditCount = (int) (targetCode.length() * 0.99);
+      new ProcessingDialog(getParent(), true, (p) -> {
+        p.setText("Calculating code...");
+        HashMap<Clazz, String> bytecode = new HashMap<>();
+        for (Clazz cz : bottom.classes) {
+          bytecode.put(cz, Conversion.textify(cz.node));
+        }
         for (Clazz cz : top.classes) {
-          DiffMatchPatch dmp = new DiffMatchPatch();
-          dmp.Diff_Timeout = 0.05f;
-          LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode.get(cz));
-          int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
-          if (edits < bestEditCount) {
-            bestEditCount = edits;
-            bestMatch = cz;
-          }
-          if (edits == 0)
-            break;
+          bytecode.put(cz, Conversion.textify(cz.node));
         }
-        if (bestMatch != null) {
-          avg += (bestEditCount / (float) targetCode.length());
-          equals.put(original.node.name, bestMatch.node.name);
-        }
-      }
-      for (Clazz original : bottom.classes) {
-        ClassNode updated = new ClassNode();
-        original.node.accept(new ClassRemapper(updated, new Remapper() {
-          @Override
-          public String map(String internalName) {
-            return equals.getOrDefault(internalName, super.map(internalName));
+        HashMap<String, String> equals = new HashMap<>();
+        float avg = 0;
+        p.setText("Comparing classes...");
+        float size = bottom.classes.size();
+        for (int i = 0; i < size; i++) {
+          Clazz original = bottom.classes.get(i);
+          String targetCode = bytecode.get(original);
+          Clazz bestMatch = null;
+          int bestEditCount = (int) (targetCode.length() * 0.99);
+          boolean abstr = Access.isAbstract(original.node.access);
+          boolean itf = Access.isInterface(original.node.access);
+          for (Clazz cz : top.classes) {
+            if (abstr != Access.isAbstract(cz.node.access))
+              continue;
+            if (itf != Access.isInterface(cz.node.access))
+              continue;
+            DiffMatchPatch dmp = new DiffMatchPatch();
+            dmp.Diff_Timeout = 0.05f;
+            LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(targetCode, bytecode.get(cz));
+            int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+            if (edits < bestEditCount) {
+              bestEditCount = edits;
+              bestMatch = cz;
+            }
+            if (edits == 0)
+              break;
           }
-        }));
-        original.node = updated;
-      }
-      bottom.loadTree(bottom.classes); // reload
-      this.invalidate();
-      this.validate();
-      this.repaint();
-      Toolkit.getDefaultToolkit().beep();
-      JOptionPane.showMessageDialog(TreeView.this.getParent(),
-          equals.size() + " of " + bottom.classes.size() + " class names were remapped successfully, with an average divergence of " + Math.round(100f * (avg / (float) equals.size())) + "%.");
-
+          p.publish(i / size * 100);
+          if (bestMatch != null) {
+            avg += (bestEditCount / (float) targetCode.length());
+            equals.put(original.node.name, bestMatch.node.name);
+          }
+        }
+        for (Clazz original : bottom.classes) {
+          ClassNode updated = new ClassNode();
+          original.node.accept(new ClassRemapper(updated, new Remapper() {
+            @Override
+            public String map(String internalName) {
+              return equals.getOrDefault(internalName, super.map(internalName));
+            }
+          }));
+          original.node = updated;
+        }
+        bottom.loadTree(bottom.classes); // reload
+        this.invalidate();
+        this.validate();
+        this.repaint();
+        JOptionPane.showMessageDialog(TreeView.this.getParent(),
+            equals.size() + " of " + bottom.classes.size() + " class names were remapped successfully, with an average divergence of " + Math.round(100f * (avg / (float) equals.size())) + "%.");
+      }).go();
     }
   }
 

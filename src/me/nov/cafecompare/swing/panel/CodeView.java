@@ -3,12 +3,15 @@ package me.nov.cafecompare.swing.panel;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.*;
+import java.util.List;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.*;
 
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.objectweb.asm.commons.*;
+import org.objectweb.asm.tree.ClassNode;
 
 import com.github.weisj.darklaf.components.loading.LoadingIndicator;
 import com.github.weisj.darklaf.icons.IconLoader;
@@ -18,10 +21,12 @@ import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.decompiler.*;
 import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.swing.Utils;
+import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.textarea.*;
 import me.nov.cafecompare.thread.ThreadKiller;
 import me.nov.cafecompare.utils.Strings;
 import name.fraser.neil.plaintext.DiffMatchPatch;
+import name.fraser.neil.plaintext.DiffMatchPatch.Operation;
 
 public class CodeView extends JPanel implements ActionListener {
   private static final long serialVersionUID = 1L;
@@ -31,6 +36,9 @@ public class CodeView extends JPanel implements ActionListener {
   private JSplitPane split;
 
   private JCheckBox aggress;
+  private JLabel similarity;
+
+  private JComboBox<String> accuracy;
 
   public static IDecompilerBridge decompilerBridge = new FernflowerBridge();
   public static int editCost = 4;
@@ -49,6 +57,11 @@ public class CodeView extends JPanel implements ActionListener {
     JPanel leftActionPanel = new JPanel();
     leftActionPanel.setLayout(new GridBagLayout());
     leftActionPanel.add(aggress = new JCheckBox("Decompile aggressively"));
+    aggress.addActionListener(this);
+    leftActionPanel.add(accuracy = new JComboBox<String>(new String[] { "Fast", "Accurate", "Very accurate", "High precision" }));
+    accuracy.setSelectedIndex(1);
+    accuracy.addActionListener(this);
+    leftActionPanel.add(similarity = new JLabel(""));
     JPanel rightActionPanel = new JPanel();
     rightActionPanel.setLayout(new GridBagLayout());
     JButton reload = new JButton(IconLoader.get().loadSVGIcon("res/refresh.svg", false));
@@ -61,6 +74,33 @@ public class CodeView extends JPanel implements ActionListener {
       highlightSearch(right, search.getText());
     });
 
+    JButton remap = new JButton("Remap right by left");
+    remap.addActionListener(l -> {
+      new ProcessingDialog(getParent(), true, (p) -> {
+        String oldName = right.last.node.name;
+        String newName = left.last.node.name;
+        List<Clazz> classes = cafecompare.trees.bottom.classes;
+        float size = classes.size();
+        for (int i = 0; i < size; i++) {
+          Clazz original = classes.get(i);
+          ClassNode updated = new ClassNode();
+          original.node.accept(new ClassRemapper(updated, new Remapper() {
+            @Override
+            public String map(String internalName) {
+              if (internalName.equals(oldName)) {
+                return newName;
+              }
+              return super.map(internalName);
+            }
+          }));
+          original.node = updated;
+          p.publish(i / size * 100);
+        }
+        cafecompare.trees.bottom.loadTree(classes);
+        load(false, right.last);
+      }).go();
+    });
+    rightActionPanel.add(remap);
     rightActionPanel.add(search);
     GridBagConstraints gbc = new GridBagConstraints();
     gbc.anchor = GridBagConstraints.EAST;
@@ -125,6 +165,18 @@ public class CodeView extends JPanel implements ActionListener {
     }
   }
 
+  public void setSimilarityText(float pc) {
+    String color;
+    if (pc > 50) {
+      color = "<font color=\"green\">";
+    } else if (pc > 25) {
+      color = "<font color=\"yellow\">";
+    } else {
+      color = "<font color=\"red\">";
+    }
+    similarity.setText("<html>" + color + "  " + (Math.round(pc * 100f) / 100f) + "%</font> similarity");
+  }
+
   @Override
   public void actionPerformed(ActionEvent e) {
     if (left.last != null)
@@ -132,6 +184,20 @@ public class CodeView extends JPanel implements ActionListener {
     if (right.last != null)
       load(false, right.last);
 
+  }
+
+  private float getAccuracy() {
+    switch (accuracy.getSelectedIndex()) {
+    case 0:
+      return 0.25f;
+    default:
+    case 1:
+      return 1f;
+    case 2:
+      return 2f;
+    case 3:
+      return 5f;
+    }
   }
 
   public void load(boolean leftPanel, Clazz member) {
@@ -162,7 +228,7 @@ public class CodeView extends JPanel implements ActionListener {
             right.last = member;
           }
           try {
-            calculateDiff();
+            calculateDiff(getAccuracy());
           } catch (BadLocationException e) {
             e.printStackTrace();
           }
@@ -173,7 +239,7 @@ public class CodeView extends JPanel implements ActionListener {
         repaint();
       });
       decompileThread.start();
-      new ThreadKiller(decompileThread, 5000).start();
+      new ThreadKiller(decompileThread, 7500).start();
     });
   }
 
@@ -186,18 +252,21 @@ public class CodeView extends JPanel implements ActionListener {
   private static final Color red = new Color(0xe74c3c).darker().darker();
   private static final Color green = new Color(0x2ecc71).darker().darker();
 
-  private void calculateDiff() throws BadLocationException {
-    left.getHighlighter().removeAllHighlights();
-    right.getHighlighter().removeAllHighlights();
+  private void calculateDiff(float timeout) throws BadLocationException {
     if (left.getText().trim().isEmpty() || right.getText().trim().isEmpty()) {
+      left.getHighlighter().removeAllHighlights();
+      right.getHighlighter().removeAllHighlights();
       return;
     }
     DiffMatchPatch dmp = new DiffMatchPatch();
+    dmp.Diff_Timeout = timeout;
+    dmp.Diff_EditCost = (short) editCost;
     LinkedList<DiffMatchPatch.Diff> diff = dmp.diff_main(left.getText(), right.getText());
     dmp.diff_cleanupSemantic(diff);
-    dmp.Diff_EditCost = (short) editCost;
     int leftpos = 0;
     int rightpos = 0;
+    left.getHighlighter().removeAllHighlights();
+    right.getHighlighter().removeAllHighlights();
     for (DiffMatchPatch.Diff d : diff) {
       switch (d.operation) {
       case DELETE:
@@ -214,5 +283,9 @@ public class CodeView extends JPanel implements ActionListener {
         break;
       }
     }
+    int edits = diff.stream().filter(d -> d.operation == Operation.INSERT || d.operation == Operation.DELETE).mapToInt(d -> d.text.length()).sum();
+    int size = diff.stream().mapToInt(d -> d.text.length()).sum();
+    float sim = 100 - (100 * (edits / (float) size));
+    setSimilarityText(sim);
   }
 }
