@@ -10,8 +10,6 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.text.*;
 
 import org.fife.ui.rtextarea.RTextScrollPane;
-import org.objectweb.asm.commons.*;
-import org.objectweb.asm.tree.ClassNode;
 
 import com.github.weisj.darklaf.components.loading.LoadingIndicator;
 import com.github.weisj.darklaf.icons.IconLoader;
@@ -20,8 +18,8 @@ import com.github.weisj.darklaf.ui.text.DarkTextUI;
 import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.decompiler.*;
 import me.nov.cafecompare.io.*;
+import me.nov.cafecompare.remapping.FullRemapper;
 import me.nov.cafecompare.swing.Utils;
-import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.textarea.*;
 import me.nov.cafecompare.thread.ThreadKiller;
 import me.nov.cafecompare.utils.Strings;
@@ -77,29 +75,12 @@ public class CodeView extends JPanel implements ActionListener {
 
     JButton remap = new JButton("Remap right by left");
     remap.addActionListener(l -> {
-      new ProcessingDialog(getParent(), true, (p) -> {
-        String oldName = right.last.node.name;
-        String newName = left.last.node.name;
-        List<Clazz> classes = cafecompare.trees.bottom.classes;
-        float size = classes.size();
-        for (int i = 0; i < size; i++) {
-          Clazz original = classes.get(i);
-          ClassNode updated = new ClassNode();
-          original.node.accept(new ClassRemapper(updated, new Remapper() {
-            @Override
-            public String map(String internalName) {
-              if (internalName.equals(oldName)) {
-                return newName;
-              }
-              return super.map(internalName);
-            }
-          }));
-          original.node = updated;
-          p.publish(i / size * 100);
-        }
-        cafecompare.trees.bottom.loadTree(classes);
-        load(false, right.last);
-      }).go();
+      String oldName = right.last.node.name;
+      String newName = left.last.node.name;
+      List<Clazz> classes = cafecompare.trees.bottom.classes;
+      new FullRemapper(classes).remap(Collections.singletonMap(oldName, newName));
+      cafecompare.trees.bottom.loadTree(classes);
+      load(false, right.last);
     });
     rightActionPanel.add(remap);
     rightActionPanel.add(search);

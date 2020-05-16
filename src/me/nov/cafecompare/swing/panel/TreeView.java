@@ -13,7 +13,6 @@ import javax.swing.*;
 import javax.swing.tree.*;
 
 import org.apache.commons.io.FilenameUtils;
-import org.objectweb.asm.commons.*;
 import org.objectweb.asm.tree.ClassNode;
 
 import com.github.weisj.darklaf.components.loading.LoadingIndicator;
@@ -22,6 +21,7 @@ import com.github.weisj.darklaf.icons.IconLoader;
 import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.asm.Access;
 import me.nov.cafecompare.io.*;
+import me.nov.cafecompare.remapping.FullRemapper;
 import me.nov.cafecompare.swing.component.JTreeWithHint;
 import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 import me.nov.cafecompare.swing.drop.*;
@@ -203,6 +203,11 @@ public class TreeView extends JPanel {
       model = new DefaultTreeModel(root);
       classes.forEach(c -> {
         String[] packages = c.node.name.split("/");
+        if (c.node.name.contains("//") || packages.length >= 256) {
+          String last = packages[packages.length - 1];
+          boolean valid = last.chars().mapToObj(i -> (char) i).allMatch(cr -> Character.isJavaIdentifierPart(cr));
+          packages = new String[] { "<html><font color=\"red\">$invalid_name", valid ? last : ("<html><font color=\"red\">$" + last.hashCode()) };
+        }
         addToTree((ClassTreeNode) model.getRoot(), c, packages, 0);
       });
       for (Object n : Collections.list(root.depthFirstEnumeration())) {
@@ -308,16 +313,7 @@ public class TreeView extends JPanel {
             equals.put(original.node.name, bestMatch.node.name);
           }
         }
-        for (Clazz original : bottom.classes) {
-          ClassNode updated = new ClassNode();
-          original.node.accept(new ClassRemapper(updated, new Remapper() {
-            @Override
-            public String map(String internalName) {
-              return equals.getOrDefault(internalName, super.map(internalName));
-            }
-          }));
-          original.node = updated;
-        }
+        new FullRemapper(bottom.classes).remap(equals);
         bottom.loadTree(bottom.classes); // reload
         this.invalidate();
         this.validate();
