@@ -13,6 +13,7 @@ public class MappingFactory {
   private final HashMap<String, String> mappings = new HashMap<>();
   public static float INTERRUPT_CONF = 90;
   public static float MIN_METH_CONF = 50;
+  public static float MIN_CLASS_CONF = 25;
 
   public MappingFactory remapMethods(Clazz source, Clazz target, ProcessingDialog p) {
     p.setText("Calculating code...");
@@ -74,7 +75,7 @@ public class MappingFactory {
       Clazz original = target.get(i);
       String targetCode = bytecode.get(original);
       Clazz bestMatch = null;
-      float bestConfidence = 25;
+      float bestConfidence = 0;
       boolean abstr = Access.isAbstract(original.node.access);
       boolean itf = Access.isInterface(original.node.access);
       for (Clazz cz : source) {
@@ -92,7 +93,7 @@ public class MappingFactory {
           break;
       }
       p.publish(i / size * 100);
-      if (bestMatch != null) {
+      if (bestConfidence > MIN_CLASS_CONF) {
         mappings.put(original.node.name, bestMatch.node.name);
       }
     }

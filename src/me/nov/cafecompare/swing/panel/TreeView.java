@@ -269,7 +269,7 @@ public class TreeView extends JPanel {
         TimeUnit.MILLISECONDS.toMinutes(millis), TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
       new ProcessingDialog(getParent(), true, (p) -> {
-        HashMap<String, String> mappings = new MappingFactory().remap(bottom.classes, top.classes, p).get();
+        HashMap<String, String> mappings = new MappingFactory().remap(top.classes, bottom.classes, p).get();
         new FullRemapper(bottom.classes).remap(mappings);
         bottom.loadTree(bottom.classes); // reload
         this.invalidate();
