@@ -2,7 +2,7 @@
 Cafecompare is a GUI application for analysis and comparison of java archives and class files. 
 Similar to github commits the file diffs are highlighted. Also works with obfuscated code. 
 It supports remapping class names by similarity to the other jar archive. This introduces a new era of deobfuscation.
-![Screenshot 1](https://i.imgur.com/TbcY1Xe.png)
+![Screenshot 1](https://i.imgur.com/up1FTqp.png)
 
 ## Getting started
 To compare two jar archives or two classes, you have to add them to the trees on the left.
