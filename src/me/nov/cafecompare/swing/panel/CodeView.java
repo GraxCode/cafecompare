@@ -10,6 +10,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.text.*;
 
 import org.fife.ui.rtextarea.RTextScrollPane;
+import org.objectweb.asm.tree.MethodNode;
 
 import com.github.weisj.darklaf.components.loading.LoadingIndicator;
 import com.github.weisj.darklaf.icons.IconLoader;
@@ -17,6 +18,7 @@ import com.github.weisj.darklaf.ui.text.DarkTextUI;
 
 import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.decompiler.*;
+import me.nov.cafecompare.diff.DiffMath;
 import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.remapping.FullRemapper;
 import me.nov.cafecompare.swing.Utils;
@@ -78,7 +80,36 @@ public class CodeView extends JPanel implements ActionListener {
       String oldName = right.last.node.name;
       String newName = left.last.node.name;
       List<Clazz> classes = cafecompare.trees.bottom.classes;
-      new FullRemapper(classes).remap(Collections.singletonMap(oldName, newName));
+      HashMap<String, String> mappings = new HashMap<>();
+      mappings.put(oldName, newName);
+      HashMap<MethodNode, String> bytecode = new HashMap<>();
+      for (MethodNode mn : left.last.node.methods) {
+        bytecode.put(mn, Conversion.textify(mn));
+      }
+      for (MethodNode mn : right.last.node.methods) {
+        bytecode.put(mn, Conversion.textify(mn));
+      }
+
+      for (MethodNode method : right.last.node.methods) {
+        if (method.instructions.size() < 5)
+          continue;
+        String targetCode = bytecode.get(method);
+        MethodNode bestMatch = null;
+        float bestConfidence = 0;
+        for (MethodNode equivalent : left.last.node.methods) {
+          float confidence = DiffMath.confidencePercent(targetCode, bytecode.get(equivalent));
+          if (confidence > bestConfidence) {
+            bestConfidence = confidence;
+            bestMatch = equivalent;
+          }
+          if (confidence > 95)
+            break;
+        }
+        if (bestConfidence > 50) {
+          mappings.put(oldName + "." + method.name + method.desc, bestMatch.name);
+        }
+      }
+      new FullRemapper(classes).remap(mappings);
       cafecompare.trees.bottom.loadTree(classes);
       load(false, right.last);
     });

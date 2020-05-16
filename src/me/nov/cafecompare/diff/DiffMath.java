@@ -4,7 +4,7 @@ import java.util.LinkedList;
 
 import name.fraser.neil.plaintext.DiffMatchPatch;
 
-public class ClassCodeDiff {
+public class DiffMath {
 
   public static int codeDiffDist(String from, String to) {
     DiffMatchPatch dmp = new DiffMatchPatch();

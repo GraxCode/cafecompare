@@ -20,7 +20,12 @@ public class FullRemapper {
       original.node.accept(new ClassRemapper(updated, new Remapper() {
         @Override
         public String map(String internalName) {
-          return mappings.getOrDefault(internalName, super.map(internalName));
+          return mappings.getOrDefault(internalName, internalName);
+        }
+
+        @Override
+        public String mapMethodName(String owner, String name, String descriptor) {
+          return mappings.getOrDefault(owner + "." + name + descriptor, name);
         }
       }));
       original.node = updated;

@@ -20,7 +20,7 @@ import com.github.weisj.darklaf.icons.IconLoader;
 
 import me.nov.cafecompare.Cafecompare;
 import me.nov.cafecompare.asm.Access;
-import me.nov.cafecompare.diff.ClassCodeDiff;
+import me.nov.cafecompare.diff.DiffMath;
 import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.remapping.FullRemapper;
 import me.nov.cafecompare.swing.component.JTreeWithHint;
@@ -134,7 +134,7 @@ public class TreeView extends JPanel {
         for (int i = 0; i < size; i++) {
           Clazz cz = ct.classes.get(i);
           String bytecode = Conversion.textify(cz.node);
-          float confidence = ClassCodeDiff.confidencePercent(targetCode, bytecode);
+          float confidence = DiffMath.confidencePercent(targetCode, bytecode);
           if (confidence > bestConfidence) {
             bestConfidence = confidence;
             bestMatch = cz;
@@ -297,7 +297,7 @@ public class TreeView extends JPanel {
             if (itf != Access.isInterface(cz.node.access))
               continue;
 
-            float confidence = ClassCodeDiff.confidencePercent(targetCode, bytecode.get(cz));
+            float confidence = DiffMath.confidencePercent(targetCode, bytecode.get(cz));
             if (confidence > bestConfidence) {
               bestConfidence = confidence;
               bestMatch = cz;
