@@ -1,6 +1,5 @@
 package me.nov.cafecompare.swing.textarea;
 
-import java.io.IOException;
 import java.nio.charset.Charset;
 
 import javax.swing.JEditorPane;
@@ -16,7 +15,7 @@ public class WelcomePane extends JEditorPane {
     this.setEditable(false);
     try {
       this.setText(IOUtils.toString(WelcomePane.class.getResourceAsStream("/res/welcome.html"), Charset.defaultCharset()));
-    } catch (IOException e) {
+    } catch (Exception e) {
       e.printStackTrace();
       this.setText(":(");
     }

@@ -4,6 +4,14 @@ Similar to github commits the file diffs are highlighted. Also works with obfusc
 It supports remapping class names by similarity to the other jar archive. This introduces a new era of deobfuscation.
 ![Screenshot 1](https://i.imgur.com/TbcY1Xe.png)
 
+## Getting started
+To compare two jar archives or two classes, you have to add them to the trees on the left.
+On the top goes the old jar file, on the bottom the new version.
+The left side of the decompiler panel will show the old code, the right side the new code.
+Deleted code will be marked with red color in the left panel, inserted code will be green in the right panel.
+If you want to remap class files by similarity, make sure the obfuscated file is placed in the bottom tree, and the (unobfuscated) source file in the top one.
+Have fun comparing!
+
 ## Donate
 If I saved your time and you want to buy me a coffee you can do so here: [![Donate with Bitcoin](https://en.cryptobadges.io/badge/micro/37f6MxNoyyksgh3hWtbh9UKkkGDSAoHCtT)](https://en.cryptobadges.io/donate/37f6MxNoyyksgh3hWtbh9UKkkGDSAoHCtT)
 
