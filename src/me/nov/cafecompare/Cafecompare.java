@@ -129,10 +129,10 @@ public class Cafecompare extends JFrame {
   }
 
   private void initBounds() {
-    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-    int width = (int) (screenSize.width * 0.75);
-    int height = (int) (screenSize.height * 0.75);
-    setBounds(screenSize.width / 2 - width / 2, screenSize.height / 2 - height / 2, width, height);
+    DisplayMode displayMode = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode();
+    int width = (int) (displayMode.getWidth() * 0.75);
+    int height = (int) (displayMode.getHeight() * 0.75);
+    setBounds(displayMode.getWidth() / 2 - width / 2, displayMode.getHeight() / 2 - height / 2, width, height);
     setMinimumSize(new Dimension((int) (width / 1.25), (int) (height / 1.25)));
   }
 
