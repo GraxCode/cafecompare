@@ -20,6 +20,7 @@ import me.nov.cafecompare.swing.component.*;
 import me.nov.cafecompare.swing.laf.LookAndFeel;
 import me.nov.cafecompare.swing.listener.ExitListener;
 import me.nov.cafecompare.swing.panel.*;
+import me.nov.cafecompare.swing.panel.tree.renderer.ClassTreeCellRenderer;
 
 public class Cafecompare extends JFrame {
   private static final long serialVersionUID = 1L;
@@ -44,7 +45,6 @@ public class Cafecompare extends JFrame {
     ws.addActionListener(l -> {
       if (JOptionPane.showConfirmDialog(Cafecompare.this, "Do you really want to reset your workspace?", "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
         this.dispose();
-        System.gc();
         new Cafecompare().setVisible(true);
       }
     });
@@ -74,41 +74,44 @@ public class Cafecompare extends JFrame {
     JMenuItem remap = new JMenuItem("Remap class names by similarity");
     remap.addActionListener(l -> trees.remapByClassNames());
     tools.add(remap);
+    JMenu treeTools = new JMenu("Tree");
+    JMenuItem hide = new JMenuItem("Hide classes with same hashes");
+    hide.addActionListener(l -> trees.hideEqual());
+    treeTools.add(hide);
+    JMenuItem reload = new JMenuItem("Reload tree");
+    reload.addActionListener(l -> trees.reload());
+    treeTools.add(reload);
+    JMenuItem swap = new JMenuItem("Swap trees");
+    swap.addActionListener(l -> trees.swap());
+    treeTools.add(swap);
+    tools.add(treeTools);
     bar.add(tools);
     JMenu options = new JMenu("Options");
+
     JMenu decompiler = new JMenu("Decompiler");
     ButtonGroup group = new ButtonGroup();
-    JRadioButtonMenuItem cfr = new JEventRBMItem("CFR 0.149", group, () -> {
-      CodeView.decompilerBridge = new CFRBridge();
-    });
-    JRadioButtonMenuItem fernflower = new JEventRBMItem("Fernflower 15-05-20", group, () -> {
-      CodeView.decompilerBridge = new FernflowerBridge();
-    });
+    JRadioButtonMenuItem cfr = new JEventRBMItem("CFR 0.149", group, () -> CodeView.decompilerBridge = new CFRBridge());
+    JRadioButtonMenuItem fernflower = new JEventRBMItem("Fernflower 15-05-20", group, () -> CodeView.decompilerBridge = new FernflowerBridge());
     fernflower.setSelected(true);
-    JRadioButtonMenuItem asmifier = new JEventRBMItem("Bytecode", group, () -> {
-      CodeView.decompilerBridge = new ASMifierBridge();
-    });
+    JRadioButtonMenuItem asmifier = new JEventRBMItem("Bytecode", group, () -> CodeView.decompilerBridge = new ASMifierBridge());
     decompiler.add(cfr);
     decompiler.add(fernflower);
     decompiler.add(asmifier);
 
     options.add(decompiler);
     JMenu tree = new JMenu("Tree");
-    tree.add(new JEventCBMItem("Auto select relative class", (selected) -> {
-      TreeView.autoSelect = selected;
-    }));
+    tree.add(new JEventCBMItem("Auto select relative class", selected -> TreeView.autoSelect = selected));
+
+    tree.add(new JEventCBMItem("Highlight new / removed files", selected -> ClassTreeCellRenderer.viewDiffs = selected, true));
+
     options.add(tree);
     bar.add(options);
     JMenu help = new JMenu("Help");
     JMenuItem laf = new JMenuItem("Look and feel settings");
-    laf.addActionListener(l -> {
-      ThemeSettings.showSettingsDialog(this);
-    });
+    laf.addActionListener(l -> ThemeSettings.showSettingsDialog(this));
     JMenuItem about = new JMenuItem("About cafecompare " + Utils.getVersion());
-    about.addActionListener(l -> {
-      JOptionPane.showMessageDialog(this, "<html>Threadtear was made by <i>noverify</i> a.k.a <i>GraxCode</i> in 2020.<br><br>"
-          + "This project is licensed under GNU GENERAL PUBLIC LICENSE Version 3.<br>You are welcome to contribute to this project on GitHub!", "About", JOptionPane.INFORMATION_MESSAGE);
-    });
+    about.addActionListener(l -> JOptionPane.showMessageDialog(this, "<html>Threadtear was made by <i>noverify</i> a.k.a <i>GraxCode</i> in 2020.<br><br>"
+        + "This project is licensed under GNU GENERAL PUBLIC LICENSE Version 3.<br>You are welcome to contribute to this project on GitHub!", "About", JOptionPane.INFORMATION_MESSAGE));
     help.add(about);
     help.add(laf);
     bar.add(help);

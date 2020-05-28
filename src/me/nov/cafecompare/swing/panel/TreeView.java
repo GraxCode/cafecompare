@@ -73,7 +73,7 @@ public class TreeView extends JPanel {
       this.setRootVisible(false);
       this.setShowsRootHandles(true);
       this.setFocusable(true);
-      this.setCellRenderer(new ClassTreeCellRenderer());
+      this.setCellRenderer(new ClassTreeCellRenderer(TreeView.this));
       ClassTreeNode root = new ClassTreeNode("");
       model = new DefaultTreeModel(root);
       this.setModel(model);
@@ -105,7 +105,7 @@ public class TreeView extends JPanel {
               JMenuItem edit = new JMenuItem("Find matching class by bytecode", analysis);
               edit.addActionListener(a -> {
                 ClassTree target = topPosition ? bottom : top;
-                long millis = target.classes.size() * (50 + 5); // 5 for ASMifier
+                long millis = target.classes.size() * (50L + 5L); // 5 for ASMifier
                 String warning = String.format("This will take about %d minutes and %d seconds. Are you sure?", TimeUnit.MILLISECONDS.toMinutes(millis),
                     TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
                 if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
@@ -125,7 +125,7 @@ public class TreeView extends JPanel {
     protected void selectMostMatching(Clazz member, ClassTree ct, boolean left) {
       if (ct.classes.contains(member))
         throw new IllegalArgumentException();
-      new ProcessingDialog(getParent(), true, (p) -> {
+      new ProcessingDialog(getParent(), true, p -> {
         String targetCode = Conversion.textify(member.node);
         Clazz bestMatch = null;
         float bestConfidence = 0;
@@ -172,23 +172,21 @@ public class TreeView extends JPanel {
       this.validate();
       this.repaint();
       try {
-        SwingUtilities.invokeLater(() -> {
-          new Thread(() -> {
-            this.inputFile = input;
-            this.loadFile(type);
-            loadTree(classes);
-            model.reload();
-            if (topPos) {
-              split.setLeftComponent(new JScrollPane(ClassTree.this));
-            } else {
-              split.setRightComponent(new JScrollPane(ClassTree.this));
-            }
-            split.setDividerLocation(divLoc);
-            this.invalidate();
-            this.validate();
-            this.repaint();
-          }).start();
-        });
+        SwingUtilities.invokeLater(() -> new Thread(() -> {
+          this.inputFile = input;
+          this.loadFile(type);
+          loadTree(classes);
+          model.reload();
+          if (topPos) {
+            split.setLeftComponent(new JScrollPane(ClassTree.this));
+          } else {
+            split.setRightComponent(new JScrollPane(ClassTree.this));
+          }
+          split.setDividerLocation(divLoc);
+          this.invalidate();
+          this.validate();
+          this.repaint();
+        }).start());
       } catch (Exception e) {
         e.printStackTrace();
       }
@@ -202,19 +200,17 @@ public class TreeView extends JPanel {
         String[] packages = c.node.name.split("/");
         if (c.node.name.contains("//") || packages.length >= 256) {
           String last = packages[packages.length - 1];
-          boolean valid = last.chars().mapToObj(i -> (char) i).allMatch(cr -> Character.isJavaIdentifierPart(cr));
+          boolean valid = last.chars().mapToObj(i -> (char) i).allMatch(Character::isJavaIdentifierPart);
           packages = new String[] { "<html><font color=\"red\">$invalid_name", valid ? last : ("<html><font color=\"red\">$" + last.hashCode()) };
         }
         addToTree((ClassTreeNode) model.getRoot(), c, packages, 0);
       });
       for (Object n : Collections.list(root.depthFirstEnumeration())) {
         ClassTreeNode node = (ClassTreeNode) n;
-        if (!node.isLeaf() && node != root) {
-          if (node.getChildCount() == 1 && node.member == null) {
-            ClassTreeNode child = (ClassTreeNode) node.getChildAt(0);
-            if (child.member == null) {
-              node.combinePackage(child);
-            }
+        if (!node.isLeaf() && node != root && node.getChildCount() == 1 && node.member == null) {
+          ClassTreeNode child = (ClassTreeNode) node.getChildAt(0);
+          if (child.member == null) {
+            node.combinePackage(child);
           }
         }
         node.sort();
@@ -238,6 +234,24 @@ public class TreeView extends JPanel {
       ClassTreeNode newChild = new ClassTreeNode(node);
       current.add(newChild);
       addToTree(newChild, c, packages, ++pckg);
+    }
+
+    public boolean removeFromTree(ClassTreeNode current, Clazz c) {
+      for (int i = 0; i < current.getChildCount(); i++) {
+        ClassTreeNode child = (ClassTreeNode) current.getChildAt(i);
+        if (child.member != null && child.member.equals(c)) {
+          model.removeNodeFromParent(child);
+          if (current.isLeaf()) {
+            model.removeNodeFromParent(current);
+          }
+          return true;
+        } else {
+          if (removeFromTree(child, c)) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     private void loadFile(String type) {
@@ -277,6 +291,37 @@ public class TreeView extends JPanel {
         this.repaint();
       }).go();
     }
+  }
+
+  public void swap() {
+    File btm = bottom.inputFile;
+    bottom = new ClassTree(false);
+    bottom.onFileDrop(top.inputFile);
+    top = new ClassTree(true);
+    top.onFileDrop(btm);
+    this.invalidate();
+    this.validate();
+    this.repaint();
+  }
+
+  public void reload() {
+    top.loadTree(top.classes);
+    bottom.loadTree(bottom.classes);
+    this.invalidate();
+    this.validate();
+    this.repaint();
+  }
+
+  public void hideEqual() {
+    for (Clazz c : bottom.classes) {
+      Clazz sameClass = top.classes.stream().filter(cl -> cl.oldEntry.getCrc() == c.oldEntry.getCrc()).findAny().orElse(null);
+      if (sameClass != null) {
+        bottom.removeFromTree((ClassTreeNode) bottom.model.getRoot(), c);
+      }
+    }
+    this.invalidate();
+    this.validate();
+    this.repaint();
   }
 
 }

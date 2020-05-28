@@ -19,6 +19,12 @@ public class JEventCBMItem extends JCheckBoxMenuItem implements ActionListener {
     this.actionPerformed(null);
   }
 
+  public JEventCBMItem(String option, Consumer<Boolean> event, boolean b) {
+    this(option, event);
+    this.setSelected(b);
+    this.actionPerformed(null);
+  }
+
   @Override
   public void actionPerformed(ActionEvent e) {
     event.accept(isSelected());

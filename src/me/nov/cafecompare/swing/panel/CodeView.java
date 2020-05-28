@@ -211,10 +211,12 @@ public class CodeView extends JPanel implements ActionListener {
           String decompiled = decompilerBridge.decompile(member.node.name, Conversion.toBytecode0(member.node));
           if (leftPanel) {
             left.setText(decompiled);
+            left.getHighlighter().removeAllHighlights();
             split.setLeftComponent(Utils.addTitleAndBorder("Top tree class - " + member.node.name.replace('/', '.'), makeSP(left)));
             left.last = member;
           } else {
             right.setText(decompiled);
+            right.getHighlighter().removeAllHighlights();
             split.setRightComponent(Utils.addTitleAndBorder("Bottom tree class - " + member.node.name.replace('/', '.'), makeSP(right)));
             right.last = member;
           }
