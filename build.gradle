@@ -17,7 +17,7 @@ compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
  
 ext {
-    darklaf_ver = "2.1.1"
+    darklaf_ver = "2.2.0"
     asm_ver = "8.0.1"
 }
  
@@ -41,7 +41,7 @@ dependencies {
 	compile "org.ow2.asm:asm-util:${asm_ver}"
 	compile "org.ow2.asm:asm-commons:${asm_ver}"
 	
-	compile 'org.benf:cfr:0.149'
+	compile 'org.benf:cfr:0.150'
 	compile name: 'fernflower-15-05-20'
 	
 	compile 'com.fifesoft:rsyntaxtextarea:3.1.1'
