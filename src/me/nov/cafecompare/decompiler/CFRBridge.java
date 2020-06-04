@@ -1,8 +1,10 @@
 package me.nov.cafecompare.decompiler;
 
 import java.io.*;
+import java.net.URL;
 import java.util.*;
 
+import org.apache.commons.io.IOUtils;
 import org.benf.cfr.reader.api.*;
 import org.benf.cfr.reader.bytecode.analysis.parse.utils.Pair;
 import org.objectweb.asm.tree.ClassNode;
@@ -69,6 +71,10 @@ public class CFRBridge implements IDecompilerBridge {
           String clzName = path.substring(0, path.length() - 6);
           if (clzName.equals(name)) {
             return Pair.make(bytes, clzName);
+          }
+          URL url = CFRBridge.class.getResource("/" + path);
+          if (url != null) {
+            return Pair.make(IOUtils.toByteArray(url), path);
           }
           // cfr loads unnecessary classes. normally you should throw a FNF exception here, but this way, no long comment at the top of the code is created
           ClassNode dummy = new ClassNode();
