@@ -103,7 +103,7 @@ public class MappingFactory {
           float avgClassesPerSecond = (totalChange / checks) * 2;
           float remaining = size - finished;
 
-          if (avgClassesPerSecond > 0) {
+          if (avgClassesPerSecond > 0 && finished < size) {
             int seconds = (int) (remaining / (avgClassesPerSecond));
             p.setText(String.format("Comparing classes... (Estimated remaining time: %d:%02d:%02d)", seconds / 3600, (seconds % 3600) / 60, seconds % 60));
           }
