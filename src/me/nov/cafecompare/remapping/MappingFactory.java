@@ -12,10 +12,10 @@ import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 
 public class MappingFactory {
   private final Map<String, String> mappings = new HashMap<>();
-  
+
   public static float CLASS_INTERRUPT_CONF = 90;
   public static float MIN_CLASS_CONF = 25;
-  
+
   public static float METH_INTERRUPT_CONF = 95;
   public static float MIN_METH_CONF = 65;
 
@@ -75,7 +75,8 @@ public class MappingFactory {
     for (Clazz cz : source) {
       bytecode.put(cz, Conversion.textify(cz.node));
     }
-    p.setText("Comparing class...");
+    p.setText("Comparing classes... (Estimated remaining time: ?)");
+
     float size = target.size();
 
     int index = 0;
@@ -83,9 +84,32 @@ public class MappingFactory {
 
     int threads = Runtime.getRuntime().availableProcessors();
     ExecutorService service = Executors.newFixedThreadPool(threads);
+    new Thread(() -> {
+      try {
+        Thread.sleep(500); // wait for the threads to initialize
+        float checks = 0;
+        int totalChange = 0;
+
+        while (finished < size) {
+          int lastFinished = finished;
+          Thread.sleep(500);
+          int change = (finished - lastFinished);
+          checks++;
+          totalChange += change;
+
+          float avgClassesPerSecond = (totalChange / checks) * 2;
+          float remaining = size - finished;
+
+          if (avgClassesPerSecond > 0) {
+            int seconds = (int) (remaining / (avgClassesPerSecond));
+            p.setText(String.format("Comparing classes... (Estimated remaining time: %d:%02d:%02d)", seconds / 3600, (seconds % 3600) / 60, seconds % 60));
+          }
+        }
+      } catch (InterruptedException e) {
+      }
+    }, "time-calculator").start();
     while (index < size) {
       Clazz clazz = target.get(index);
-      p.setText("Comparing class " + clazz.node.name);
       service.execute(() -> {
         findCommon(new ArrayList<>(source), bytecode, clazz);
         finished++;

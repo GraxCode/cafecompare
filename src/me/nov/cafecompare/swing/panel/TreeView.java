@@ -6,7 +6,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.jar.JarEntry;
 
 import javax.swing.*;
@@ -105,9 +104,8 @@ public class TreeView extends JPanel {
               JMenuItem edit = new JMenuItem("Find matching class by bytecode", analysis);
               edit.addActionListener(a -> {
                 ClassTree target = topPosition ? bottom : top;
-                long millis = target.classes.size() * (50L + 5L); // 5 for ASMifier
-                String warning = String.format("This will take about %d minutes and %d seconds. Are you sure?", TimeUnit.MILLISECONDS.toMinutes(millis),
-                    TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+                long seconds = (target.classes.size() * (50L + 5L)) / 1000; // 5 for ASMifier
+                String warning = String.format("This can take up to about %d:%02d:%02d. Are you sure?", seconds / 3600, (seconds % 3600) / 60, seconds % 60);
                 if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                   cafecompare.code.load(topPosition, tn.member);
                   selectMostMatching(tn.member, target, !topPosition);
@@ -278,9 +276,7 @@ public class TreeView extends JPanel {
   }
 
   public void remapByClassNames() {
-    long millis = bottom.classes.size() * top.classes.size() * (50L);
-    String warning = String.format("<html>Are you sure you want to guess the class names of the bottom file by the similarity to the top file?<br>This will take about %d minutes and %d seconds.",
-        TimeUnit.MILLISECONDS.toMinutes(millis), TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+    String warning = "<html>Are you sure you want to guess the class names of the bottom file by the similarity to the top file?<br>This can take very long, depending on class count.";
     if (JOptionPane.showConfirmDialog(TreeView.this.getParent(), warning, "Warning", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
       new ProcessingDialog(getParent(), true, p -> {
         Map<String, String> mappings = new MappingFactory().remap(top.classes, bottom.classes, p).get();
