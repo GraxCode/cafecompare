@@ -13,11 +13,13 @@ import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 public class MappingFactory {
   private final Map<String, String> mappings = new HashMap<>();
 
-  public static float CLASS_INTERRUPT_CONF = 90;
-  public static float MIN_CLASS_CONF = 25;
+  public static final float CLASS_INTERRUPT_CONF = 90;
+  public static final float MIN_CLASS_CONF = 25;
 
-  public static float METH_INTERRUPT_CONF = 95;
-  public static float MIN_METH_CONF = 65;
+  public static final float METH_INTERRUPT_CONF = 95;
+  public static final float MIN_METH_CONF = 65;
+
+  public static final float MAX_CONFIDENCE_DEVIATION = 25;
 
   public MappingFactory remapMethods(Clazz source, Clazz target, ProcessingDialog p) {
     p.setText("Calculating code...");
@@ -65,6 +67,7 @@ public class MappingFactory {
   }
 
   private int finished = 0;
+  private final Map<String, SuspectedItem<String>> uncalculatedMappings = new HashMap<>();
 
   public MappingFactory remap(List<Clazz> source, List<Clazz> target, ProcessingDialog p) {
     p.setText("Calculating code...");
@@ -123,6 +126,9 @@ public class MappingFactory {
       service.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
     } catch (InterruptedException e) {
     }
+    p.setText("Final steps...");
+    double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
+    uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
     return this;
   }
 
@@ -155,8 +161,18 @@ public class MappingFactory {
         break;
     }
     if (bestConfidence > MIN_CLASS_CONF) {
-      synchronized (mappings) {
-        mappings.put(original.node.name, bestMatch.node.name);
+      String name = bestMatch.node.name;
+      synchronized (uncalculatedMappings) {
+        if (uncalculatedMappings.containsKey(name)) {
+          SuspectedItem<String> presentValue = uncalculatedMappings.get(name);
+          if (bestConfidence > presentValue.percent) {
+            // better match found, update
+            presentValue.item = name;
+            presentValue.percent = bestConfidence;
+          }
+        } else {
+          uncalculatedMappings.put(name, new SuspectedItem<String>(original.node.name, bestConfidence));
+        }
       }
     }
   }
