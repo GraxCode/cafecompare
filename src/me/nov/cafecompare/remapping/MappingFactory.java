@@ -11,7 +11,8 @@ import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 
 public class MappingFactory {
   private final Map<String, String> mappings = new HashMap<>();
-  public static float INTERRUPT_CONF = 90;
+  public static float CL_INTERRUPT_CONF = 90;
+  public static float METH_INTERRUPT_CONF = 95;
   public static float MIN_METH_CONF = 50;
   public static float MIN_CLASS_CONF = 25;
 
@@ -40,7 +41,7 @@ public class MappingFactory {
           bestConfidence = confidence;
           bestMatch = equivalent;
         }
-        if (confidence > INTERRUPT_CONF)
+        if (confidence > METH_INTERRUPT_CONF)
           break;
       }
       p.publish(i / size * 100);
@@ -69,10 +70,11 @@ public class MappingFactory {
     for (Clazz cz : source) {
       bytecode.put(cz, Conversion.textify(cz.node));
     }
-    p.setText("Comparing classes...");
+    p.setText("Comparing class...");
     float size = target.size();
     for (int i = 0; i < size; i++) {
       Clazz original = target.get(i);
+      p.setText("Comparing class " + original.node.name);
       String targetCode = bytecode.get(original);
       Clazz bestMatch = null;
       float bestConfidence = 0;
@@ -97,7 +99,7 @@ public class MappingFactory {
           bestConfidence = confidence;
           bestMatch = cz;
         }
-        if (confidence > INTERRUPT_CONF)
+        if (confidence > CL_INTERRUPT_CONF)
           break;
       }
       p.publish(i / size * 100);
