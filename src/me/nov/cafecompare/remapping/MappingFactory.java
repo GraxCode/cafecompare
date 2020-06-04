@@ -10,7 +10,7 @@ import me.nov.cafecompare.io.*;
 import me.nov.cafecompare.swing.dialog.ProcessingDialog;
 
 public class MappingFactory {
-  private final HashMap<String, String> mappings = new HashMap<>();
+  private final Map<String, String> mappings = new HashMap<>();
   public static float INTERRUPT_CONF = 90;
   public static float MIN_METH_CONF = 50;
   public static float MIN_CLASS_CONF = 25;
@@ -51,7 +51,7 @@ public class MappingFactory {
     return this;
   }
 
-  public HashMap<String, String> get() {
+  public Map<String, String> get() {
     return mappings;
   }
 
@@ -78,6 +78,14 @@ public class MappingFactory {
       float bestConfidence = 0;
       boolean abstr = Access.isAbstract(original.node.access);
       boolean itf = Access.isInterface(original.node.access);
+      int methods = original.node.methods.size();
+      int fields = original.node.fields.size();
+
+      Collections.sort(source, (a, b) -> {
+        int adif = (Math.abs(a.node.methods.size() - methods) + 1) * (Math.abs(a.node.fields.size() - fields) + 1);
+        int bdif = (Math.abs(b.node.methods.size() - methods) + 1) * (Math.abs(b.node.fields.size() - fields) + 1);
+        return Integer.compare(adif, bdif);
+      });
       for (Clazz cz : source) {
         if (abstr != Access.isAbstract(cz.node.access))
           continue;
