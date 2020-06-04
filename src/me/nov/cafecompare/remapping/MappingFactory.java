@@ -82,8 +82,10 @@ public class MappingFactory {
       }
     }
     p.setText("Final steps...");
-    double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
-    uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
+    if (!uncalculatedMappings.isEmpty()) {
+      double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
+      uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
+    }
     return this;
   }
 
@@ -148,8 +150,10 @@ public class MappingFactory {
     } catch (InterruptedException e) {
     }
     p.setText("Final steps...");
-    double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
-    uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
+    if (!uncalculatedMappings.isEmpty()) {
+      double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
+      uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
+    }
     return this;
   }
 
