@@ -49,7 +49,8 @@ public class ProcessingDialog extends JDialog {
   }
 
   public void publish(float pc) {
-    pb.setValue((int) pc);
+    if (pc > pb.getValue())
+      pb.setValue((int) pc);
   }
 
   public void setText(String text) {
