@@ -19,7 +19,31 @@ public class MappingFactory {
   public static final float METH_INTERRUPT_CONF = 95;
   public static final float MIN_METH_CONF = 65;
 
-  public static final float MAX_CONFIDENCE_DEVIATION = 25;
+  public static final float MAX_CONFIDENCE_DEVIATION = 30;
+
+  private final Map<String, SuspectedItem<String>> uncalculatedMappings = new HashMap<>();
+
+  private void putUncalculated(String name, String mapName, float bestConfidence) {
+    if (uncalculatedMappings.containsKey(name)) {
+      SuspectedItem<String> presentValue = uncalculatedMappings.get(name);
+      if (bestConfidence > presentValue.percent) {
+        // better match found, update
+        presentValue.item = mapName;
+        presentValue.percent = bestConfidence;
+      }
+    } else {
+      uncalculatedMappings.put(name, new SuspectedItem<String>(mapName, bestConfidence));
+    }
+  }
+
+  public Map<String, String> get() {
+    return mappings;
+  }
+
+  public MappingFactory with(String oldName, String newName) {
+    mappings.put(oldName, newName);
+    return this;
+  }
 
   public MappingFactory remapMethods(Clazz source, Clazz target, ProcessingDialog p) {
     p.setText("Calculating code...");
@@ -31,6 +55,7 @@ public class MappingFactory {
       bytecode.put(mn, Conversion.textify(mn));
     }
     p.setText("Comparing methods...");
+    uncalculatedMappings.clear();
     List<MethodNode> methods = target.node.methods;
     float size = methods.size();
     for (int i = 0; i < size; i++) {
@@ -51,23 +76,18 @@ public class MappingFactory {
       }
       p.publish(i / size * 100);
       if (bestConfidence > MIN_METH_CONF) {
-        mappings.put(target.node.name + "." + method.name + method.desc, bestMatch.name);
+        String mapName = target.node.name + "." + method.name + method.desc;
+        String name = bestMatch.name;
+        putUncalculated(name, mapName, bestConfidence);
       }
     }
-    return this;
-  }
-
-  public Map<String, String> get() {
-    return mappings;
-  }
-
-  public MappingFactory with(String oldName, String newName) {
-    mappings.put(oldName, newName);
+    p.setText("Final steps...");
+    double avgMatch = uncalculatedMappings.values().stream().mapToDouble(s -> s.percent).average().getAsDouble();
+    uncalculatedMappings.entrySet().stream().filter(e -> avgMatch - e.getValue().percent < MAX_CONFIDENCE_DEVIATION).forEach(e -> mappings.put(e.getValue().item, e.getKey()));
     return this;
   }
 
   private int finished = 0;
-  private final Map<String, SuspectedItem<String>> uncalculatedMappings = new HashMap<>();
 
   public MappingFactory remap(List<Clazz> source, List<Clazz> target, ProcessingDialog p) {
     p.setText("Calculating code...");
@@ -84,6 +104,7 @@ public class MappingFactory {
 
     int index = 0;
     finished = 0;
+    uncalculatedMappings.clear();
 
     int threads = Runtime.getRuntime().availableProcessors();
     ExecutorService service = Executors.newFixedThreadPool(threads);
@@ -163,16 +184,7 @@ public class MappingFactory {
     if (bestConfidence > MIN_CLASS_CONF) {
       String name = bestMatch.node.name;
       synchronized (uncalculatedMappings) {
-        if (uncalculatedMappings.containsKey(name)) {
-          SuspectedItem<String> presentValue = uncalculatedMappings.get(name);
-          if (bestConfidence > presentValue.percent) {
-            // better match found, update
-            presentValue.item = name;
-            presentValue.percent = bestConfidence;
-          }
-        } else {
-          uncalculatedMappings.put(name, new SuspectedItem<String>(original.node.name, bestConfidence));
-        }
+        putUncalculated(name, original.node.name, bestConfidence);
       }
     }
   }
